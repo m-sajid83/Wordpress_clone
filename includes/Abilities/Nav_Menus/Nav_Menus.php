@@ -46,14 +46,6 @@ final class Nav_Menus {
 	private const CATEGORY = 'navigation';
 
 	/**
-	 * Lookup type returned for collection requests.
-	 *
-	 * @since x.x.x
-	 * @var string
-	 */
-	private const LOOKUP_COLLECTION = 'collection';
-
-	/**
 	 * Hooks the ability, and the category it needs, into the Abilities API.
 	 *
 	 * Plugin: this method has no equivalent in a core implementation. In core, register()
@@ -313,8 +305,8 @@ final class Nav_Menus {
 		);
 
 		if ( $with_items ) {
-			$items          = wp_get_nav_menu_items( $term );
-			$data['items']  = is_array( $items ) ? array_map( array( $this, 'format_menu_item' ), $items ) : array();
+			$items = wp_get_nav_menu_items( $term );
+			$data['items'] = is_array( $items ) ? array_map( array( $this, 'format_menu_item' ), $items ) : array();
 		}
 
 		return $data;
