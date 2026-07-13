@@ -58,7 +58,7 @@
 		"@wordpress/scripts": "32.6.0",
 		"concurrently": "10.0.3",
 		"filenamify": "7.0.2",
-		"typescript": "5.9.3",
+		"typescript": "6.0.3",
 		"webpack-remove-empty-scripts": "1.1.1"
 	},
 	"dependencies": {
