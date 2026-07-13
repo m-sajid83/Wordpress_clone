@@ -202,7 +202,7 @@ final class Nav_Menus {
 	 * @since x.x.x
 	 *
 	 * @param int|string $menu Menu ID or slug.
-	 * @return array<string, mixed>|WP_Error The formatted menu, or a WP_Error when not found.
+	 * @return array<string, mixed>|\WP_Error The formatted menu, or a WP_Error when not found.
 	 */
 	private function get_single_menu_response( $menu ) {
 		$term = '' !== $menu && 0 !== $menu ? wp_get_nav_menu_object( $menu ) : false;
@@ -223,8 +223,8 @@ final class Nav_Menus {
 	 * @since x.x.x
 	 *
 	 * @param string $location Registered theme location slug.
-	 * @return array<string, mixed>|WP_Error The formatted menu, or a WP_Error when the
-	 *                                       location has no assigned menu.
+	 * @return array<string, mixed>|\WP_Error The formatted menu, or a WP_Error when the
+	 *                                        location has no assigned menu.
 	 */
 	private function get_menu_by_location_response( string $location ) {
 		$locations = get_nav_menu_locations();
@@ -257,9 +257,10 @@ final class Nav_Menus {
 
 		$menus = array();
 		foreach ( wp_get_nav_menus( $args ) as $term ) {
-			if ( $term instanceof WP_Term ) {
-				$menus[] = $this->format_menu( $term, false );
+			if ( ! $term instanceof WP_Term ) {
+				continue;
 			}
+			$menus[] = $this->format_menu( $term, false );
 		}
 
 		$registered_locations = array();
@@ -289,8 +290,8 @@ final class Nav_Menus {
 	 *
 	 * @since x.x.x
 	 *
-	 * @param WP_Term $term       The nav menu term.
-	 * @param bool    $with_items Whether to include the menu's items.
+	 * @param \WP_Term $term       The nav menu term.
+	 * @param bool     $with_items Whether to include the menu's items.
 	 * @return array<string, mixed> The formatted menu data.
 	 */
 	private function format_menu( WP_Term $term, bool $with_items ): array {
@@ -305,7 +306,7 @@ final class Nav_Menus {
 		);
 
 		if ( $with_items ) {
-			$items = wp_get_nav_menu_items( $term );
+			$items         = wp_get_nav_menu_items( $term );
 			$data['items'] = is_array( $items ) ? array_map( array( $this, 'format_menu_item' ), $items ) : array();
 		}
 
@@ -326,9 +327,10 @@ final class Nav_Menus {
 	private function get_menu_locations( int $menu_id ): array {
 		$locations = array();
 		foreach ( get_nav_menu_locations() as $location => $assigned_menu_id ) {
-			if ( (int) $assigned_menu_id === $menu_id ) {
-				$locations[] = $location;
+			if ( (int) $assigned_menu_id !== $menu_id ) {
+				continue;
 			}
+			$locations[] = $location;
 		}
 
 		return $locations;
@@ -337,26 +339,33 @@ final class Nav_Menus {
 	/**
 	 * Formats a single nav menu item into the ability output shape.
 	 *
+	 * Nav menu items are `WP_Post` objects, but the fields below (other than `ID` and
+	 * `menu_order`, which are native post fields) are dynamic properties that
+	 * wp_setup_nav_menu_item() adds at runtime and are not part of WP_Post's declared
+	 * property list. They are read via get_object_vars() rather than direct property
+	 * access so static analysis does not treat them as undefined.
+	 *
 	 * @since x.x.x
 	 *
-	 * @param WP_Post $item A nav menu item, as returned by wp_get_nav_menu_items().
+	 * @param \WP_Post $item A nav menu item, as returned by wp_get_nav_menu_items().
 	 * @return array<string, mixed> The formatted menu item data.
 	 */
 	private function format_menu_item( WP_Post $item ): array {
-		$classes = is_array( $item->classes ) ? $item->classes : array();
+		$fields  = get_object_vars( $item );
+		$classes = isset( $fields['classes'] ) && is_array( $fields['classes'] ) ? $fields['classes'] : array();
 
 		return array(
 			'id'          => (int) $item->ID,
-			'parent'      => (int) $item->menu_item_parent,
-			'title'       => (string) $item->title,
-			'url'         => (string) $item->url,
-			'target'      => (string) $item->target,
-			'classes'     => array_values( array_filter( $classes, static fn( $class ) => '' !== $class ) ),
-			'description' => (string) $item->description,
+			'parent'      => isset( $fields['menu_item_parent'] ) ? (int) $fields['menu_item_parent'] : 0,
+			'title'       => isset( $fields['title'] ) ? (string) $fields['title'] : '',
+			'url'         => isset( $fields['url'] ) ? (string) $fields['url'] : '',
+			'target'      => isset( $fields['target'] ) ? (string) $fields['target'] : '',
+			'classes'     => array_values( array_filter( $classes, static fn( $menu_item_class ) => '' !== $menu_item_class ) ),
+			'description' => isset( $fields['description'] ) ? (string) $fields['description'] : '',
 			'menu_order'  => (int) $item->menu_order,
-			'type'        => (string) $item->type,
-			'object'      => (string) $item->object,
-			'object_id'   => (int) $item->object_id,
+			'type'        => isset( $fields['type'] ) ? (string) $fields['type'] : '',
+			'object'      => isset( $fields['object'] ) ? (string) $fields['object'] : '',
+			'object_id'   => isset( $fields['object_id'] ) ? (int) $fields['object_id'] : 0,
 		);
 	}
 
